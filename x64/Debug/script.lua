@@ -1,1 +1,1 @@
-
+TextSources.TextSourceRoots.Weather.SetChangeWind()
