@@ -14,6 +14,16 @@
 #include <direct.h>
 #define GetCurrentDir _getcwd
 
+DWORD pid = 0;
+HANDLE hProcess;
+std::string dllName;
+size_t sz;
+
+bool Annoinitialized = FALSE;
+
+CWnd* gobtn;
+CWnd* statuslabel;
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -73,6 +83,8 @@ BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CAnnoPythonAPIToolDlg::OnBnClickedButton1)
+	ON_BN_CLICKED(IDC_BUTTON2, &CAnnoPythonAPIToolDlg::OnBnClickedButton2)
+	ON_LBN_SELCHANGE(IDC_LIST2, &CAnnoPythonAPIToolDlg::OnLbnSelchangeList2)
 END_MESSAGE_MAP()
 
 
@@ -101,7 +113,7 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
 	}
-
+	
 	// Set the icon for this dialog.  The framework does this automatically
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
@@ -121,6 +133,13 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 	ListBox1.AddString(L"TextSources.TextSourceRoots.Cheat.GlobalCheats.ToggleIgnoreBuildingCosts()");
 	ListBox1.AddString(L"TextSources.TextSourceRoots.Cheat.GlobalCheats.ToggleProductivity()");
 
+
+	gobtn = GetDlgItem(IDC_BUTTON1);
+	statuslabel = GetDlgItem(IDC_STATIC);
+
+	gobtn->EnableWindow(FALSE);
+	statuslabel->SetWindowTextW(L"Anno 1800 NOT initialized.");
+	Annoinitialized = FALSE;
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -237,50 +256,35 @@ std::string curDir(std::string file)
 	return std::string(buffer) + "\\" + file;
 }
 
-
 void runCommand(std::string cmd)
 {
+	if (FindWindowA("Anno 1800","Anno 1800") != NULL) {
+
 	std::ofstream outfile(curDir("script.lua"));
-	outfile << cmd << std::endl;
+	outfile << cmd + "\n" << std::endl;
 	outfile.close();
-
-	DWORD pid = 0;
-	HANDLE hProcess;
-	LPVOID lpBaseAddress;
-	std::string dllName = curDir("AnnoPythonInject.dll");
-	size_t sz = strlen(dllName.c_str());
-
-	while (pid == 0) {
-		pid = findProcessID();
-		Sleep(500);
-	}
-
-	pid = findProcessID();
-	std::cout << pid;
-	std::cout << "\n";
-	hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
-
-	HMODULE AnnoPythonInjectModule = GetRemoteModuleHandle(pid, "annopythoninject.dll");
 
 	HANDLE hThread = NULL;
 
-	if (AnnoPythonInjectModule == 0000000000000000)
-	{
-		lpBaseAddress = VirtualAllocEx(hProcess, NULL, sz, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-		WriteProcessMemory(hProcess, lpBaseAddress, dllName.c_str(), sz, NULL);
-		HMODULE hModule = GetModuleHandle(L"kernel32.dll");
-		LPVOID lpStartAddress = GetProcAddress(hModule, "LoadLibraryA");
-		hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)lpStartAddress, lpBaseAddress, 0, NULL);
+	LPVOID lpBaseAddress = VirtualAllocEx(hProcess, NULL, sz, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	WriteProcessMemory(hProcess, lpBaseAddress, dllName.c_str(), sz, NULL);
+	HMODULE hModule = GetModuleHandle(L"kernel32.dll");
+	LPVOID lpStartAddress = GetProcAddress(hModule, "LoadLibraryA");
+	hThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)lpStartAddress, lpBaseAddress, 0, NULL);
 
-		CloseHandle(hThread);
-		VirtualFreeEx(hProcess, lpBaseAddress, sz, MEM_RELEASE);
+	CloseHandle(hThread);
+	VirtualFreeEx(hProcess, lpBaseAddress, sz, MEM_RELEASE);
+
+	}
+	else {
+		gobtn->EnableWindow(FALSE);
+		statuslabel->SetWindowTextW(L"Anno 1800 NOT initialized.");
+		Annoinitialized = FALSE;
 	}
 }
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton1()
 {
-	ListBox1.GetItemData(ListBox1.GetCurSel());
-
 	int nSel = ListBox1.GetCurSel();
 	CString ItemSelected;
 	if (nSel != LB_ERR)
@@ -293,4 +297,37 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton1()
 	const char* c = s2;
 
 	runCommand(c);
+}
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton2()
+{
+	while (pid == 0) {
+		pid = findProcessID();
+		Sleep(500);
+	}
+
+	hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
+
+	dllName = curDir("AnnoPythonInject.dll");
+	sz = strlen(dllName.c_str());
+	
+	statuslabel->SetWindowTextW(L"Anno 1800 initialized!");
+	if (ListBox1.GetCurSel() != -1) {
+		gobtn->EnableWindow(TRUE);
+	}
+	Annoinitialized = TRUE;
+}
+
+
+void CAnnoPythonAPIToolDlg::OnLbnSelchangeList2()
+{
+	if (ListBox1.GetCurSel() == -1) {
+		gobtn->EnableWindow(FALSE);
+	}
+	else {
+		if (Annoinitialized == TRUE) {
+			gobtn->EnableWindow(TRUE);
+		}
+	}
 }
