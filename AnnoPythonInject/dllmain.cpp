@@ -1,7 +1,6 @@
 #include "pch.h"
 #include <string>
 #include <tlhelp32.h>
-#include <regex>
 
 BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
@@ -41,10 +40,14 @@ BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD ul_reason_for_call, LPVOID lpReserv
             std::string::size_type pos = std::string(buffer).find_last_of("\\/") - 1;
             std::string path = std::string(buffer);
             path.replace(path.find("AnnoPythonInject.dll"), sizeof("AnnoPythonInject.dll") - 1, "script.lua");
-          
             std::string scriptPath = path;
-            std::string scriptPath2 = std::regex_replace(scriptPath, std::regex("\\\\"), "/");
-            std::string command = "console.startScript(\"" + scriptPath2 + "\")";
+            std::size_t found = scriptPath.find_first_of("\\");
+            while (found != std::string::npos)
+            {
+                scriptPath[found] = '/';
+                found = scriptPath.find_first_of("\\", found + 1);
+            }
+            std::string command = "console.startScript(\"" + scriptPath + "\")";
             PyRun_SimpleString(command.c_str());
             PyGILState_Release(gstate);
         }
@@ -59,12 +62,7 @@ BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD ul_reason_for_call, LPVOID lpReserv
         {
             b = FreeLibrary(selfModuleHandle);
         }
-
-
     }
-
-
-
     return TRUE;
 }
 
