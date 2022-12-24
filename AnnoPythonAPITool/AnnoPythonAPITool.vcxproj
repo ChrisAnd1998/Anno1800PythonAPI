@@ -210,6 +210,9 @@
   <ItemGroup>
     <Image Include="res\AnnoPythonAPITool.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="ItemList.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
