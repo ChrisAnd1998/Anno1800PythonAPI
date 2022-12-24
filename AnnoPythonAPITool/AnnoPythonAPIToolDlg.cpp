@@ -381,6 +381,9 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton1()
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton2()
 {
+
+	pid = findProcessID();
+
 	hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
 
 	dllName = curDir("AnnoPythonInject.dll");
@@ -388,9 +391,9 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton2()
 
 	if (pid != 0) {
 		statuslabel->SetWindowTextW(L"Anno 1800 initialized!");
-		if (ListBox1.GetCurSel() != -1) {
+		//if (ListBox1.GetCurSel() != -1) {
 			gobtn->EnableWindow(TRUE);
-		}
+		//}
 		Annoinitialized = TRUE;
 	}
 }
