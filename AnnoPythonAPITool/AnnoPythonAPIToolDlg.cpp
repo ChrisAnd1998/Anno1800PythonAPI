@@ -1,20 +1,12 @@
-
-// AnnoPythonAPIToolDlg.cpp : implementation file
-//
-
 #include "pch.h"
 #include "framework.h"
 #include "AnnoPythonAPITool.h"
 #include "AnnoPythonAPIToolDlg.h"
-#include "afxdialogex.h"
 #include <string>
 #include <tlhelp32.h>
 #include <iostream>
 #include <fstream>
 #include <direct.h>
-#include <thread>
-
-
 #define GetCurrentDir _getcwd
 
 DWORD pid = 0;
@@ -34,20 +26,40 @@ CWnd* statuslabel;
 CWnd* customvaluebox;
 CWnd* commandbox;
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
+bool f8down = FALSE;
 
-LRESULT CALLBACK MyLowLevelKeyBoardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK MyLowLevelKeyBoardProc(int nCode, WPARAM wParam, LPARAM lParam)
+{
 	if (nCode >= HC_ACTION)
 	{
-		KBDLLHOOKSTRUCT* pkbhs = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
-		if (pkbhs->vkCode == VK_F8) {
+		KBDLLHOOKSTRUCT* pkbhs = reinterpret_cast<KBDLLHOOKSTRUCT*> (lParam);
+		if (pkbhs->vkCode == VK_F8)
+		{
 			HWND hWnd = AfxGetApp()->m_pMainWnd->m_hWnd;
-			ShowWindow(hWnd, SW_NORMAL);
-			SetForegroundWindow(hWnd);
+
+			LONG lStyles = GetWindowLong(hWnd, GWL_STYLE);
+
+			if (f8down == FALSE)
+			{
+				f8down = TRUE;
+			}
+			else
+			{
+				if (lStyles & WS_MINIMIZE)
+				{
+					ShowWindow(hWnd, SW_NORMAL);
+					SetForegroundWindow(hWnd);
+				}
+				else
+				{
+					ShowWindow(hWnd, SW_MINIMIZE);
+				}
+
+				f8down = FALSE;
+			}
 		}
 	}
+
 	return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
 
@@ -63,14 +75,14 @@ DWORD findProcessID()
 	if (!Process32First(hProcessSnap, &pe32))
 	{
 		CloseHandle(hProcessSnap);
-		return(FALSE);
+		return (FALSE);
 	}
 
 	do {
-		if (!wcscmp(pe32.szExeFile, L"Anno1800.exe")) {
+		if (!wcscmp(pe32.szExeFile, L"Anno1800.exe"))
+		{
 			return pe32.th32ProcessID;
 		}
-
 	} while (Process32Next(hProcessSnap, &pe32));
 	return 0;
 }
@@ -87,9 +99,7 @@ HMODULE GetRemoteModuleHandle(DWORD lpProcessId, LPCSTR lpModule)
 		me32.dwSize = sizeof(MODULEENTRY32);
 		if (Module32First(hSnapshot, &me32))
 		{
-			do
-			{
-
+			do {
 				std::wstring wide(me32.szModule);
 				std::string str(wide.begin(), wide.end());
 
@@ -100,11 +110,12 @@ HMODULE GetRemoteModuleHandle(DWORD lpProcessId, LPCSTR lpModule)
 				}
 			} while (Module32Next(hSnapshot, &me32));
 		}
+
 		CloseHandle(hSnapshot);
 	}
+
 	return hResult;
 }
-
 
 std::string curDir(std::string file)
 {
@@ -113,29 +124,30 @@ std::string curDir(std::string file)
 	std::string::size_type pos = std::string(buffer).find_last_of("\\/") - 1;
 	return std::string(buffer) + "\\" + file;
 }
+
 // CAboutDlg dialog used for App About
 
 class CAboutDlg : public CDialogEx
 {
-public:
-	CAboutDlg();
+public: CAboutDlg();
 
-// Dialog Data
+	  // Dialog Data
+
 #ifdef AFX_DESIGN_TIME
-	enum { IDD = IDD_ABOUTBOX };
+	  enum
+	  {
+		  IDD = IDD_ABOUTBOX
+	  };
+
 #endif
 
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+protected: virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 
-// Implementation
-protected:
-	DECLARE_MESSAGE_MAP()
+		 // Implementation
+protected: DECLARE_MESSAGE_MAP()
 };
 
-CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
-{
-}
+CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX) {}
 
 void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 {
@@ -145,13 +157,9 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
 END_MESSAGE_MAP()
 
-
 // CAnnoPythonAPIToolDlg dialog
 
-
-
-CAnnoPythonAPIToolDlg::CAnnoPythonAPIToolDlg(CWnd* pParent /*=nullptr*/)
-	: CDialogEx(IDD_ANNOPYTHONAPITOOL_DIALOG, pParent)
+CAnnoPythonAPIToolDlg::CAnnoPythonAPIToolDlg(CWnd* pParent /*=nullptr*/) : CDialogEx(IDD_ANNOPYTHONAPITOOL_DIALOG, pParent)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -176,13 +184,14 @@ BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON7, &CAnnoPythonAPIToolDlg::OnBnClickedButton7)
 	ON_BN_CLICKED(IDC_BUTTON8, &CAnnoPythonAPIToolDlg::OnBnClickedButton8)
 	ON_CBN_SELCHANGE(IDC_COMBO1, &CAnnoPythonAPIToolDlg::OnCbnSelchangeCombo1)
+	ON_BN_CLICKED(IDC_BUTTON9, &CAnnoPythonAPIToolDlg::OnBnClickedButton9)
 END_MESSAGE_MAP()
 
-
 // CAnnoPythonAPIToolDlg message handlers
-void annoInit() {
-		pid = findProcessID();
-		hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
+void annoInit()
+{
+	pid = findProcessID();
+	hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
 }
 
 BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
@@ -208,22 +217,19 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
 		}
 	}
-	
+
 	// Set the icon for this dialog.  The framework does this automatically
 	//  when the application's main window is not a dialog
-	SetIcon(m_hIcon, TRUE);			// Set big icon
-	SetIcon(m_hIcon, FALSE);		// Set small icon
+	SetIcon(m_hIcon, TRUE);	// Set big icon
+	SetIcon(m_hIcon, FALSE);	// Set small icon
 
 	// TODO: Add extra initialization here
-	
-	
 
 	hHook = SetWindowsHookEx(WH_KEYBOARD_LL, MyLowLevelKeyBoardProc, NULL, 0);
 
 	//ts = TextSources.TextSourceRoots
 	dllName = curDir("AnnoPythonInject.dll");
 	sz = strlen(dllName.c_str());
-
 
 	gobtn = GetDlgItem(IDC_BUTTON1);
 	//statuslabel = GetDlgItem(IDC_STATIC);
@@ -239,14 +245,9 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 	CWnd* cheatbtn = GetDlgItem(IDC_BUTTON3);
 	cheatbtn->SendMessage(BM_CLICK, NULL, NULL);
 
-
-
-
-
 	//ComboBox1.AddString(_T("Diamond") + wpnl + _T("+") + _T("190547"));
 	//ComboBox1.AddString(_T("A Bottle of Champagne") + wpnl + _T("+") + _T("192213"));
 
-	
 	std::ifstream myfile("ItemList.txt");
 	if (myfile.is_open())
 	{
@@ -262,26 +263,25 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 			bool guidset = false;
 			while (AfxExtractSubString(sToken, wideStr, i, '@'))
 			{
-				if (guidset == false) {
+				if (guidset == false)
+				{
 					GUID = sToken;
 					guidset = true;
 				}
-				else {
+				else
+				{
 					ComboBox1.AddString(sToken + wpnl + "@" + GUID);
 					guidset = false;
 				}
 
 				i++;
 			}
-
-			
 		}
+
 		myfile.close();
 	}
 
-
-
-	return TRUE;  // return TRUE  unless you set the focus to a control
+	return TRUE;	// return TRUE  unless you set the focus to a control
 }
 
 void CAnnoPythonAPIToolDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -305,9 +305,9 @@ void CAnnoPythonAPIToolDlg::OnPaint()
 {
 	if (IsIconic())
 	{
-		CPaintDC dc(this); // device context for painting
+		CPaintDC dc(this);	// device context for painting
 
-		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM>(dc.GetSafeHdc()), 0);
+		SendMessage(WM_ICONERASEBKGND, reinterpret_cast<WPARAM> (dc.GetSafeHdc()), 0);
 
 		// Center icon in client rectangle
 		int cxIcon = GetSystemMetrics(SM_CXICON);
@@ -330,19 +330,17 @@ void CAnnoPythonAPIToolDlg::OnPaint()
 //  the minimized window.
 HCURSOR CAnnoPythonAPIToolDlg::OnQueryDragIcon()
 {
-	return static_cast<HCURSOR>(m_hIcon);
+	return static_cast<HCURSOR> (m_hIcon);
 }
-
-
-
 
 void runCommand(std::string cmd)
 {
-	if (FindWindowA("Anno 1800","Anno 1800") != NULL) {
-
+	if (FindWindowA("Anno 1800", "Anno 1800") != NULL)
+	{
 		annoInit();
-		
-		if (cmd.find("{CVAL}") != std::string::npos) {
+
+		if (cmd.find("{CVAL}") != std::string::npos)
+		{
 			CString sWindowText;
 			customvaluebox->GetWindowText(sWindowText);
 			std::string cval = CW2A(sWindowText.GetString());
@@ -350,7 +348,6 @@ void runCommand(std::string cmd)
 			cmd.replace(cmd.find("{CVAL}"), sizeof("{CVAL}") - 1, cval);
 		}
 
-	
 		std::ofstream outfile(curDir("script.lua"));
 		outfile << cmd + "\r\n" << std::endl;
 		outfile.close();
@@ -365,9 +362,9 @@ void runCommand(std::string cmd)
 
 		CloseHandle(hThread);
 		VirtualFreeEx(hProcess, lpBaseAddress, sz, MEM_RELEASE);
-
 	}
-	else {
+	else
+	{
 		MessageBox(NULL, L"Anno 1800 process not found!", L"", MB_OK);
 	}
 }
@@ -381,10 +378,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton1()
 	runCommand(cval);
 }
 
-
 void CAnnoPythonAPIToolDlg::OnLbnSelchangeList2()
 {
-
 	int nSel = ListBox1.GetCurSel();
 	CString ItemSelected;
 	if (nSel != LB_ERR)
@@ -400,15 +395,28 @@ void CAnnoPythonAPIToolDlg::OnLbnSelchangeList2()
 
 }
 
-
-
 void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 {
+	CWnd* btn;
+	btn = GetDlgItem(IDC_BUTTON3);
+	btn->SetWindowTextW(L"Cheats *");
+	btn = GetDlgItem(IDC_BUTTON5);
+	btn->SetWindowTextW(L"Weather -");
+	btn = GetDlgItem(IDC_BUTTON6);
+	btn->SetWindowTextW(L"Incidents -");
+	btn = GetDlgItem(IDC_BUTTON7);
+	btn->SetWindowTextW(L"Contracts -");
+	btn = GetDlgItem(IDC_BUTTON4);
+	btn->SetWindowTextW(L"Discovery -");
+	btn = GetDlgItem(IDC_BUTTON8);
+	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = NULL;
+
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Add 100k coins to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, 100000)"));
-	ListBox1.AddString(_T("Substract 100k coins to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, -100000)"));
+	ListBox1.AddString(_T("Substract 100k coins from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, -100000)"));
 	ListBox1.AddString(_T("Add 100k goods to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(100000)"));
-	ListBox1.AddString(_T("Substract 100k goods to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(-100000)"));
+	ListBox1.AddString(_T("Substract 100k goods from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(-100000)"));
 	ListBox1.AddString(_T("Add {CUSTOM VALUE}<-(GUID) to current selected ship") + wpnl + _T("ts.Selection.Object.ItemContainer.SetEquipSlot(0, 0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(0)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot({CVAL}, 1)"));
 	ListBox1.AddString(_T("Toggle electricity") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleElectricity()"));
 	ListBox1.AddString(_T("Toggle super ship speed") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleSuperShipSpeed()"));
@@ -419,31 +427,70 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 	ListBox1.AddString(_T("Toggle defer expensive ecomony") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleDeferExpensiveEconomy()"));
 	ListBox1.AddString(_T("Toggle fluid resident settle behaviour") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleFluidResidentSettleBehaviour()"));
 	ListBox1.AddString(_T("Toggle defer expensive quest system") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleDeferExpensiveQuestSystem()"));
+	ListBox1.AddString(_T("Disable undiscovered") + wpnl + _T("ts.Cheat.GlobalCheats.DisableUndiscovered()"));
 
 }
 
-
 void CAnnoPythonAPIToolDlg::OnBnClickedButton4()
 {
+	CWnd* btn;
+	btn = GetDlgItem(IDC_BUTTON3);
+	btn->SetWindowTextW(L"Cheats -");
+	btn = GetDlgItem(IDC_BUTTON5);
+	btn->SetWindowTextW(L"Weather -");
+	btn = GetDlgItem(IDC_BUTTON6);
+	btn->SetWindowTextW(L"Incidents -");
+	btn = GetDlgItem(IDC_BUTTON7);
+	btn->SetWindowTextW(L"Contracts -");
+	btn = GetDlgItem(IDC_BUTTON4);
+	btn->SetWindowTextW(L"Discovery *");
+	btn = GetDlgItem(IDC_BUTTON8);
+	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = NULL;
 	ListBox1.ResetContent();
-	//ListBox1.AddString(_T("Set UI scale to 60%") + wpnl + _T("ts.Interface.SetUiScreenScaling(0.6)"));
+	ListBox1.AddString(_T("Discover whole map") + wpnl + _T("TextSources.TextSourceRoots.Discovery.ShowAll()"));
+	ListBox1.AddString(_T("Hide whole map") + wpnl + _T("TextSources.TextSourceRoots.Discovery.HideAll()"));
 	//ListBox1.AddString(_T("Set UI scale back to 100%") + wpnl + _T("ts.Interface.SetUiScreenScaling(1.0)"));
 	//ListBox1.AddString(_T("Toggle show console") + wpnl + _T("console.toggleVisibility()"));
 }
 
-
 void CAnnoPythonAPIToolDlg::OnBnClickedButton5()
 {
+	CWnd* btn;
+	btn = GetDlgItem(IDC_BUTTON3);
+	btn->SetWindowTextW(L"Cheats -");
+	btn = GetDlgItem(IDC_BUTTON5);
+	btn->SetWindowTextW(L"Weather *");
+	btn = GetDlgItem(IDC_BUTTON6);
+	btn->SetWindowTextW(L"Incidents -");
+	btn = GetDlgItem(IDC_BUTTON7);
+	btn->SetWindowTextW(L"Contracts -");
+	btn = GetDlgItem(IDC_BUTTON4);
+	btn->SetWindowTextW(L"Discovery -");
+	btn = GetDlgItem(IDC_BUTTON8);
+	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Toggle wind direction") + wpnl + _T("ts.Weather.SetChangeWind()"));
 
-
-
 }
-
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton6()
 {
+	CWnd* btn;
+	btn = GetDlgItem(IDC_BUTTON3);
+	btn->SetWindowTextW(L"Cheats -");
+	btn = GetDlgItem(IDC_BUTTON5);
+	btn->SetWindowTextW(L"Weather -");
+	btn = GetDlgItem(IDC_BUTTON6);
+	btn->SetWindowTextW(L"Incidents *");
+	btn = GetDlgItem(IDC_BUTTON7);
+	btn->SetWindowTextW(L"Contracts -");
+	btn = GetDlgItem(IDC_BUTTON4);
+	btn->SetWindowTextW(L"Discovery -");
+	btn = GetDlgItem(IDC_BUTTON8);
+	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Toggle incidents") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleIncidents()"));
 	ListBox1.AddString(_T("Toggle incident spreading") + wpnl + _T("ts.Incidents.ToggleSpreading()"));
@@ -451,17 +498,43 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton6()
 	//ListBox1.AddString(_T("Infect current selected ship with ...") + wpnl + _T("ts.Selection.Object.ShipIncident.CheatInfect(102669)"));
 }
 
-
 void CAnnoPythonAPIToolDlg::OnBnClickedButton7()
 {
+	CWnd* btn;
+	btn = GetDlgItem(IDC_BUTTON3);
+	btn->SetWindowTextW(L"Cheats -");
+	btn = GetDlgItem(IDC_BUTTON5);
+	btn->SetWindowTextW(L"Weather -");
+	btn = GetDlgItem(IDC_BUTTON6);
+	btn->SetWindowTextW(L"Incidents -");
+	btn = GetDlgItem(IDC_BUTTON7);
+	btn->SetWindowTextW(L"Contracts *");
+	btn = GetDlgItem(IDC_BUTTON4);
+	btn->SetWindowTextW(L"Discovery -");
+	btn = GetDlgItem(IDC_BUTTON8);
+	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Toggle skip transit") + wpnl + _T("ts.Contracts.ToggleSkipTransit()"));
 	ListBox1.AddString(_T("Fill pyramid") + wpnl + _T("ts.Contracts.FillPyramid()"));
 }
 
-
 void CAnnoPythonAPIToolDlg::OnBnClickedButton8()
 {
+	CWnd* btn;
+	btn = GetDlgItem(IDC_BUTTON3);
+	btn->SetWindowTextW(L"Cheats -");
+	btn = GetDlgItem(IDC_BUTTON5);
+	btn->SetWindowTextW(L"Weather -");
+	btn = GetDlgItem(IDC_BUTTON6);
+	btn->SetWindowTextW(L"Incidents -");
+	btn = GetDlgItem(IDC_BUTTON7);
+	btn->SetWindowTextW(L"Contracts -");
+	btn = GetDlgItem(IDC_BUTTON4);
+	btn->SetWindowTextW(L"Discovery -");
+	btn = GetDlgItem(IDC_BUTTON8);
+	btn->SetWindowTextW(L"Dump (UNSAFE) *");
+	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("\r\nTextSources.TextSourceRoots.Cheat.ToggleInGameDebugCheatPage()"));
 	ListBox1.AddString(_T("\r\nTextSources.TextSourceRoots.Unlock.ToggleCheatUnlockAll()"));
@@ -813,17 +886,24 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton8()
 	ListBox1.AddString(_T("\r\nTextSources.TextSourceRoots.Options.SetToggleFullscreen()"));
 }
 
-
 void CAnnoPythonAPIToolDlg::OnCbnSelchangeCombo1()
 {
 	CString sInput;
 	ComboBox1.GetWindowText(sInput);
 	//std::string guid = CW2A(sWindowText.GetString());
 	CString sToken = _T("");
-	int i = 0; // substring index to extract
+	int i = 0;	// substring index to extract
 	while (AfxExtractSubString(sToken, sInput, i, '@'))
 	{
 		customvaluebox->SetWindowText(sToken);
 		i++;
 	}
+}
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton9()
+{
+	ListBox1.ResetContent();
+	ListBox1.AddString(_T("Set remaining morale to 100%") + wpnl + _T("TextSources.TextSourceRoots.Expedition.Morale(100)"));
+	ListBox1.AddString(_T("Set remaining morale to 0%") + wpnl + _T("TextSources.TextSourceRoots.Expedition.Morale(0)"));
+	
 }
