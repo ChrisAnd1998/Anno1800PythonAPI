@@ -24,6 +24,7 @@ bool Annoinitialized = FALSE;
 CWnd* gobtn;
 CWnd* statuslabel;
 CWnd* customvaluebox;
+CWnd* qtyvaluebox;
 CWnd* commandbox;
 
 bool f8down = FALSE;
@@ -169,6 +170,7 @@ void CAnnoPythonAPIToolDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_LIST2, ListBox1);
 	DDX_Control(pDX, IDC_COMBO1, ComboBox1);
+	DDX_Control(pDX, IDC_CHECK1, CheckBox1);
 }
 
 BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
@@ -185,6 +187,11 @@ BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON8, &CAnnoPythonAPIToolDlg::OnBnClickedButton8)
 	ON_CBN_SELCHANGE(IDC_COMBO1, &CAnnoPythonAPIToolDlg::OnCbnSelchangeCombo1)
 	ON_BN_CLICKED(IDC_BUTTON9, &CAnnoPythonAPIToolDlg::OnBnClickedButton9)
+	ON_EN_CHANGE(IDC_EDIT2, &CAnnoPythonAPIToolDlg::OnEnChangeEdit2)
+	ON_BN_CLICKED(IDC_BUTTON10, &CAnnoPythonAPIToolDlg::OnBnClickedButton10)
+	ON_BN_CLICKED(IDC_BUTTON11, &CAnnoPythonAPIToolDlg::OnBnClickedButton11)
+	ON_BN_CLICKED(IDC_BUTTON13, &CAnnoPythonAPIToolDlg::OnBnClickedButton13)
+	ON_BN_CLICKED(IDC_BUTTON12, &CAnnoPythonAPIToolDlg::OnBnClickedButton12)
 END_MESSAGE_MAP()
 
 // CAnnoPythonAPIToolDlg message handlers
@@ -237,6 +244,9 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 	commandbox = GetDlgItem(IDC_EDIT3);
 
 	customvaluebox->SetWindowTextW(L"190547");
+
+	qtyvaluebox = GetDlgItem(IDC_EDIT4);
+	qtyvaluebox->SetWindowTextW(L"10000");
 
 	//gobtn->EnableWindow(FALSE);
 	//statuslabel->SetWindowTextW(L"Anno 1800 NOT initialized.");
@@ -339,13 +349,22 @@ void runCommand(std::string cmd)
 	{
 		annoInit();
 
-		if (cmd.find("{CVAL}") != std::string::npos)
+		if (cmd.find("{GUID}") != std::string::npos)
 		{
 			CString sWindowText;
 			customvaluebox->GetWindowText(sWindowText);
 			std::string cval = CW2A(sWindowText.GetString());
 
-			cmd.replace(cmd.find("{CVAL}"), sizeof("{CVAL}") - 1, cval);
+			cmd.replace(cmd.find("{GUID}"), sizeof("{GUID}") - 1, cval);
+		}
+
+		if (cmd.find("{QTY}") != std::string::npos)
+		{
+			CString sWindowText;
+			qtyvaluebox->GetWindowText(sWindowText);
+			std::string cval = CW2A(sWindowText.GetString());
+
+			cmd.replace(cmd.find("{QTY}"), sizeof("{QTY}") - 1, cval);
 		}
 
 		std::ofstream outfile(curDir("script.lua"));
@@ -369,13 +388,18 @@ void runCommand(std::string cmd)
 	}
 }
 
-void CAnnoPythonAPIToolDlg::OnBnClickedButton1()
+void executeScript()
 {
 	CString sWindowText;
 	commandbox->GetWindowText(sWindowText);
 	std::string cval = CW2A(sWindowText.GetString());
 
 	runCommand(cval);
+}
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton1()
+{
+	executeScript();
 }
 
 void CAnnoPythonAPIToolDlg::OnLbnSelchangeList2()
@@ -413,11 +437,11 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 	btn = NULL;
 
 	ListBox1.ResetContent();
-	ListBox1.AddString(_T("Add 100k coins to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, 100000)"));
-	ListBox1.AddString(_T("Substract 100k coins from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, -100000)"));
-	ListBox1.AddString(_T("Add 100k goods to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(100000)"));
-	ListBox1.AddString(_T("Substract 100k goods from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(-100000)"));
-	ListBox1.AddString(_T("Add {CUSTOM VALUE}<-(GUID) to current selected ship") + wpnl + _T("ts.Selection.Object.ItemContainer.SetEquipSlot(0, 0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(0)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot({CVAL}, 1)"));
+	ListBox1.AddString(_T("Add (Quantity) coins to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, {QTY})"));
+	ListBox1.AddString(_T("Substract (Quantity) coins from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, -{QTY})"));
+	ListBox1.AddString(_T("Add (Quantity) goods to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount({QTY})"));
+	ListBox1.AddString(_T("Substract (Quantity) goods from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(-{QTY})"));
+	ListBox1.AddString(_T("Add (GUID) to current selected ship") + wpnl + _T("ts.Selection.Object.ItemContainer.SetEquipSlot(0, 0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(0)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot({GUID}, {QTY})"));
 	ListBox1.AddString(_T("Toggle electricity") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleElectricity()"));
 	ListBox1.AddString(_T("Toggle super ship speed") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleSuperShipSpeed()"));
 	ListBox1.AddString(_T("Add building materials to current selected ship") + wpnl + _T("ts.Selection.Object.ItemContainer.SetEquipSlot(0, 0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(1)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot(1010196, 50)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot(1010218, 50)"));
@@ -906,4 +930,72 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton9()
 	ListBox1.AddString(_T("Set remaining morale to 100%") + wpnl + _T("TextSources.TextSourceRoots.Expedition.Morale(100)"));
 	ListBox1.AddString(_T("Set remaining morale to 0%") + wpnl + _T("TextSources.TextSourceRoots.Expedition.Morale(0)"));
 	
+}
+
+
+void CAnnoPythonAPIToolDlg::OnEnChangeEdit2()
+{
+	if (CheckBox1.GetCheck() == TRUE) {
+		executeScript();
+	}
+}
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton10()
+{
+	
+
+	try {
+		CString val;
+		customvaluebox->GetWindowTextW(val);
+		int newval = _wtoi(val) - 1;
+		customvaluebox->SetWindowTextW(std::to_wstring(newval).data());
+	}
+	catch (int) {
+		// Block of code to handle errors
+	}
+
+}
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton11()
+{
+	try {
+		CString val;
+		customvaluebox->GetWindowTextW(val);
+		int newval = _wtoi(val) + 1;
+		customvaluebox->SetWindowTextW(std::to_wstring(newval).data());
+	}
+	catch (int) {
+		// Block of code to handle errors
+	}
+	
+}
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton13()
+{
+	try {
+		CString val;
+		qtyvaluebox->GetWindowTextW(val);
+		int newval = _wtoi(val) + 1;
+		qtyvaluebox->SetWindowTextW(std::to_wstring(newval).data());
+	}
+	catch (int) {
+		// Block of code to handle errors
+	}
+}
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton12()
+{
+	try {
+		CString val;
+		qtyvaluebox->GetWindowTextW(val);
+		int newval = _wtoi(val) - 1;
+		qtyvaluebox->SetWindowTextW(std::to_wstring(newval).data());
+	}
+	catch (int) {
+		// Block of code to handle errors
+	}
 }

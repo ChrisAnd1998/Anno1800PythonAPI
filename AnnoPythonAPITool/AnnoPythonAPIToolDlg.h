@@ -46,4 +46,10 @@ public:
 	afx_msg void OnEnChangeEdit3();
 	afx_msg void OnCbnSelchangeCombo1();
 	afx_msg void OnBnClickedButton9();
+	CButton CheckBox1;
+	afx_msg void OnEnChangeEdit2();
+	afx_msg void OnBnClickedButton10();
+	afx_msg void OnBnClickedButton11();
+	afx_msg void OnBnClickedButton13();
+	afx_msg void OnBnClickedButton12();
 };
