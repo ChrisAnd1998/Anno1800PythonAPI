@@ -1,7 +1,6 @@
 #include "pch.h"
 #include <string>
 #include <tlhelp32.h>
-#include <cassert>
 
 HINSTANCE selfModuleHandle;
 bool unload = false;
@@ -23,47 +22,43 @@ PYRUN_SIMPLESTRING PyRun_SimpleString = (PYRUN_SIMPLESTRING)GetProcAddress(hModu
 
 BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
-    if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
-       // _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-       // _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-        selfModuleHandle = hInst;
+	if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+	{
+		selfModuleHandle = hInst;
 
-        Py_Initialize();
+		Py_Initialize();
 
-        if (Py_IsInitialized != 0)
-        {
+		if (Py_IsInitialized != 0)
+		{
+			DWORD* gstate = PyGILState_Ensure();
 
-            DWORD* gstate = PyGILState_Ensure();
+			char buffer[MAX_PATH];
+			HMODULE AnnoPythonInjectModule = GetModuleHandle(L"annopythoninject.dll");
+			GetModuleFileNameA(AnnoPythonInjectModule, buffer, sizeof(buffer));
+			std::string::size_type pos = std::string(buffer).find_last_of("\\/") - 1;
+			std::string path = std::string(buffer);
+			path.replace(path.find("AnnoPythonInject.dll"), sizeof("AnnoPythonInject.dll") - 1, "script.lua");
+			std::string scriptPath = path;
+			std::size_t found = scriptPath.find_first_of("\\");
+			while (found != std::string::npos)
+			{
+				scriptPath[found] = '/';
+				found = scriptPath.find_first_of("\\", found + 1);
+			}
 
-            char buffer[MAX_PATH];
-            HMODULE AnnoPythonInjectModule = GetModuleHandle(L"annopythoninject.dll");
-            GetModuleFileNameA(AnnoPythonInjectModule, buffer, sizeof(buffer));
-            std::string::size_type pos = std::string(buffer).find_last_of("\\/") - 1;
-            std::string path = std::string(buffer);
-            path.replace(path.find("AnnoPythonInject.dll"), sizeof("AnnoPythonInject.dll") - 1, "script.lua");
-            std::string scriptPath = path;
-            std::size_t found = scriptPath.find_first_of("\\");
-            while (found != std::string::npos)
-            {
-                scriptPath[found] = '/';
-                found = scriptPath.find_first_of("\\", found + 1);
-            }
-            std::string command = "console.startScript(\"" + scriptPath + "\")";
-            PyRun_SimpleString(command.c_str());
-            PyGILState_Release(gstate);
-        }
+			std::string command = "console.startScript(\"" + scriptPath + "\")";
+			PyRun_SimpleString(command.c_str());
+			PyGILState_Release(gstate);
+		}
 
-   
-        Py_Finalize();
-       
+		Py_Finalize();
 
-        bool b = true;
-        while (b == true)
-        {
-            b = FreeLibrary(selfModuleHandle);
-        }
+		bool b = true;
+		while (b == true)
+		{
+			b = FreeLibrary(selfModuleHandle);
+		}
+	}
 
-
-    }
-    return TRUE;
+	return TRUE;
 }
