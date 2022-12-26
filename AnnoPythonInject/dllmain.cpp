@@ -1,17 +1,21 @@
 #include "pch.h"
 #include <string>
 #include <tlhelp32.h>
-
+#include <cassert>
 
 HINSTANCE selfModuleHandle;
 bool unload = false;
 
+typedef int(__stdcall* PY_INITIALIZE)();
+typedef int(__stdcall* PY_FINALIZE)();
 typedef int(__stdcall* PY_ISINITIALIZED)();
 typedef int(__stdcall* PYRUN_SIMPLESTRING)(const char* str);
 typedef DWORD* (__stdcall* PYGILSTATE_ENSURE)();
 typedef void(__stdcall* PYGILSTATE_RELEASE)(DWORD* gstate);
 
 HMODULE hModule = GetModuleHandle(L"python35.dll");
+PY_INITIALIZE Py_Initialize = (PY_INITIALIZE)GetProcAddress(hModule, "Py_Initialize");
+PY_FINALIZE Py_Finalize = (PY_FINALIZE)GetProcAddress(hModule, "Py_Finalize");
 PY_ISINITIALIZED Py_IsInitialized = (PY_ISINITIALIZED)GetProcAddress(hModule, "Py_IsInitialized");
 PYGILSTATE_ENSURE PyGILState_Ensure = (PYGILSTATE_ENSURE)GetProcAddress(hModule, "PyGILState_Ensure");
 PYGILSTATE_RELEASE PyGILState_Release = (PYGILSTATE_RELEASE)GetProcAddress(hModule, "PyGILState_Release");
@@ -20,12 +24,15 @@ PYRUN_SIMPLESTRING PyRun_SimpleString = (PYRUN_SIMPLESTRING)GetProcAddress(hModu
 BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
     if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
-        _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
-        _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+       // _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
+       // _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
         selfModuleHandle = hInst;
+
+        Py_Initialize();
 
         if (Py_IsInitialized != 0)
         {
+
             DWORD* gstate = PyGILState_Ensure();
 
             char buffer[MAX_PATH];
@@ -46,13 +53,9 @@ BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD ul_reason_for_call, LPVOID lpReserv
             PyGILState_Release(gstate);
         }
 
-      
-
-        free(Py_IsInitialized);
-        free(PyGILState_Ensure);
-        free(PyGILState_Release);
-        free(PyRun_SimpleString);
-
+   
+        Py_Finalize();
+       
 
         bool b = true;
         while (b == true)
@@ -60,8 +63,7 @@ BOOL APIENTRY DllMain(HINSTANCE hInst, DWORD ul_reason_for_call, LPVOID lpReserv
             b = FreeLibrary(selfModuleHandle);
         }
 
-        
+
     }
     return TRUE;
 }
-
