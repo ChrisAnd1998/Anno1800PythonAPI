@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <direct.h>
+#include <thread>
 
 
 #define GetCurrentDir _getcwd
@@ -24,6 +25,7 @@ size_t sz;
 //Used to hide code from listbox 
 CString wpnl = L"                                                                                                                                                                                                                                                                                         \n";
 
+HHOOK hHook = NULL;
 
 bool Annoinitialized = FALSE;
 
@@ -35,6 +37,19 @@ CWnd* commandbox;
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+
+LRESULT CALLBACK MyLowLevelKeyBoardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode >= HC_ACTION)
+	{
+		KBDLLHOOKSTRUCT* pkbhs = reinterpret_cast<KBDLLHOOKSTRUCT*>(lParam);
+		if (pkbhs->vkCode == VK_F8) {
+			HWND hWnd = AfxGetApp()->m_pMainWnd->m_hWnd;
+			ShowWindow(hWnd, SW_NORMAL);
+			SetForegroundWindow(hWnd);
+		}
+	}
+	return CallNextHookEx(hHook, nCode, wParam, lParam);
+}
 
 DWORD findProcessID()
 {
@@ -153,7 +168,6 @@ BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CAnnoPythonAPIToolDlg::OnBnClickedButton1)
-	ON_BN_CLICKED(IDC_BUTTON2, &CAnnoPythonAPIToolDlg::OnBnClickedButton2)
 	ON_LBN_SELCHANGE(IDC_LIST2, &CAnnoPythonAPIToolDlg::OnLbnSelchangeList2)
 	ON_BN_CLICKED(IDC_BUTTON3, &CAnnoPythonAPIToolDlg::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON4, &CAnnoPythonAPIToolDlg::OnBnClickedButton4)
@@ -161,13 +175,15 @@ BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON6, &CAnnoPythonAPIToolDlg::OnBnClickedButton6)
 	ON_BN_CLICKED(IDC_BUTTON7, &CAnnoPythonAPIToolDlg::OnBnClickedButton7)
 	ON_BN_CLICKED(IDC_BUTTON8, &CAnnoPythonAPIToolDlg::OnBnClickedButton8)
-	//ON_EN_CHANGE(IDC_EDIT3, &CAnnoPythonAPIToolDlg::OnEnChangeEdit3)
 	ON_CBN_SELCHANGE(IDC_COMBO1, &CAnnoPythonAPIToolDlg::OnCbnSelchangeCombo1)
 END_MESSAGE_MAP()
 
 
 // CAnnoPythonAPIToolDlg message handlers
-
+void annoInit() {
+		pid = findProcessID();
+		hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
+}
 
 BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 {
@@ -199,39 +215,26 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
+	
+	
+
+	hHook = SetWindowsHookEx(WH_KEYBOARD_LL, MyLowLevelKeyBoardProc, NULL, 0);
 
 	//ts = TextSources.TextSourceRoots
+	dllName = curDir("AnnoPythonInject.dll");
+	sz = strlen(dllName.c_str());
 
 
 	gobtn = GetDlgItem(IDC_BUTTON1);
-	statuslabel = GetDlgItem(IDC_STATIC);
+	//statuslabel = GetDlgItem(IDC_STATIC);
 	customvaluebox = GetDlgItem(IDC_EDIT2);
 	commandbox = GetDlgItem(IDC_EDIT3);
 
 	customvaluebox->SetWindowTextW(L"190547");
 
-	gobtn->EnableWindow(FALSE);
-	statuslabel->SetWindowTextW(L"Anno 1800 NOT initialized.");
-	Annoinitialized = FALSE;
-
-
-
-	pid = findProcessID();
-
-
-	hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
-
-	dllName = curDir("AnnoPythonInject.dll");
-	sz = strlen(dllName.c_str());
-
-	if (pid != 0) {
-		statuslabel->SetWindowTextW(L"Anno 1800 initialized!");
-		//if (ListBox1.GetCurSel() != -1) {
-			gobtn->EnableWindow(TRUE);
-		//}
-		Annoinitialized = TRUE;
-	}
-
+	//gobtn->EnableWindow(FALSE);
+	//statuslabel->SetWindowTextW(L"Anno 1800 NOT initialized.");
+	//Annoinitialized = FALSE;
 
 	CWnd* cheatbtn = GetDlgItem(IDC_BUTTON3);
 	cheatbtn->SendMessage(BM_CLICK, NULL, NULL);
@@ -336,6 +339,8 @@ HCURSOR CAnnoPythonAPIToolDlg::OnQueryDragIcon()
 void runCommand(std::string cmd)
 {
 	if (FindWindowA("Anno 1800","Anno 1800") != NULL) {
+
+		annoInit();
 		
 		if (cmd.find("{CVAL}") != std::string::npos) {
 			CString sWindowText;
@@ -363,9 +368,7 @@ void runCommand(std::string cmd)
 
 	}
 	else {
-		gobtn->EnableWindow(FALSE);
-		statuslabel->SetWindowTextW(L"Anno 1800 NOT initialized.");
-		Annoinitialized = FALSE;
+		MessageBox(NULL, L"Anno 1800 process not found!", L"", MB_OK);
 	}
 }
 
@@ -376,26 +379,6 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton1()
 	std::string cval = CW2A(sWindowText.GetString());
 
 	runCommand(cval);
-}
-
-
-void CAnnoPythonAPIToolDlg::OnBnClickedButton2()
-{
-
-	pid = findProcessID();
-
-	hProcess = OpenProcess(PROCESS_ALL_ACCESS, TRUE, pid);
-
-	dllName = curDir("AnnoPythonInject.dll");
-	sz = strlen(dllName.c_str());
-
-	if (pid != 0) {
-		statuslabel->SetWindowTextW(L"Anno 1800 initialized!");
-		//if (ListBox1.GetCurSel() != -1) {
-			gobtn->EnableWindow(TRUE);
-		//}
-		Annoinitialized = TRUE;
-	}
 }
 
 
@@ -443,8 +426,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 void CAnnoPythonAPIToolDlg::OnBnClickedButton4()
 {
 	ListBox1.ResetContent();
-	ListBox1.AddString(_T("Set UI scale to 60%") + wpnl + _T("ts.Interface.SetUiScreenScaling(0.6)"));
-	ListBox1.AddString(_T("Set UI scale back to 100%") + wpnl + _T("ts.Interface.SetUiScreenScaling(1.0)"));
+	//ListBox1.AddString(_T("Set UI scale to 60%") + wpnl + _T("ts.Interface.SetUiScreenScaling(0.6)"));
+	//ListBox1.AddString(_T("Set UI scale back to 100%") + wpnl + _T("ts.Interface.SetUiScreenScaling(1.0)"));
 	//ListBox1.AddString(_T("Toggle show console") + wpnl + _T("console.toggleVisibility()"));
 }
 
