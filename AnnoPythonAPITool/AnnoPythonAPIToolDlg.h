@@ -52,4 +52,16 @@ public:
 	afx_msg void OnBnClickedButton11();
 	afx_msg void OnBnClickedButton13();
 	afx_msg void OnBnClickedButton12();
+	afx_msg void OnBnClickedRadio2();
+	CButton luamodeoption;
+	CButton pythonmodeoption;
+	afx_msg void OnBnClickedRadio1();
+	afx_msg void OnBnClickedButton14();
+	afx_msg void OnBnClickedCheck3();
+	afx_msg void OnBnClickedCheck2();
+	afx_msg void OnBnClickedCheck1();
+	CButton CheckBox2;
+	CButton CheckBox3;
+	CButton CheckBox4;
+	afx_msg void OnBnClickedCheck4();
 };

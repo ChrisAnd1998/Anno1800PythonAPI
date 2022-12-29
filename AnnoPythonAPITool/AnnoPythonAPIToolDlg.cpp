@@ -21,11 +21,16 @@ HHOOK hHook = NULL;
 
 bool Annoinitialized = FALSE;
 
+bool LuaMode = TRUE;
+bool PythonMode = FALSE;
+
 CWnd* gobtn;
 CWnd* statuslabel;
 CWnd* customvaluebox;
 CWnd* qtyvaluebox;
 CWnd* commandbox;
+
+int slotNumber = 0;
 
 bool f8down = FALSE;
 
@@ -171,6 +176,11 @@ void CAnnoPythonAPIToolDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST2, ListBox1);
 	DDX_Control(pDX, IDC_COMBO1, ComboBox1);
 	DDX_Control(pDX, IDC_CHECK1, CheckBox1);
+	DDX_Control(pDX, IDC_RADIO2, luamodeoption);
+	DDX_Control(pDX, IDC_RADIO1, pythonmodeoption);
+	DDX_Control(pDX, IDC_CHECK2, CheckBox2);
+	DDX_Control(pDX, IDC_CHECK3, CheckBox3);
+	DDX_Control(pDX, IDC_CHECK4, CheckBox4);
 }
 
 BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
@@ -192,6 +202,12 @@ BEGIN_MESSAGE_MAP(CAnnoPythonAPIToolDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON11, &CAnnoPythonAPIToolDlg::OnBnClickedButton11)
 	ON_BN_CLICKED(IDC_BUTTON13, &CAnnoPythonAPIToolDlg::OnBnClickedButton13)
 	ON_BN_CLICKED(IDC_BUTTON12, &CAnnoPythonAPIToolDlg::OnBnClickedButton12)
+	ON_BN_CLICKED(IDC_RADIO2, &CAnnoPythonAPIToolDlg::OnBnClickedRadio2)
+	ON_BN_CLICKED(IDC_RADIO1, &CAnnoPythonAPIToolDlg::OnBnClickedRadio1)
+	ON_BN_CLICKED(IDC_BUTTON14, &CAnnoPythonAPIToolDlg::OnBnClickedButton14)
+	ON_BN_CLICKED(IDC_CHECK3, &CAnnoPythonAPIToolDlg::OnBnClickedCheck3)
+	ON_BN_CLICKED(IDC_CHECK2, &CAnnoPythonAPIToolDlg::OnBnClickedCheck2)
+	ON_BN_CLICKED(IDC_CHECK4, &CAnnoPythonAPIToolDlg::OnBnClickedCheck4)
 END_MESSAGE_MAP()
 
 // CAnnoPythonAPIToolDlg message handlers
@@ -248,6 +264,8 @@ BOOL CAnnoPythonAPIToolDlg::OnInitDialog()
 	qtyvaluebox = GetDlgItem(IDC_EDIT4);
 	qtyvaluebox->SetWindowTextW(L"10000");
 
+
+	luamodeoption.SetCheck(1);
 	//gobtn->EnableWindow(FALSE);
 	//statuslabel->SetWindowTextW(L"Anno 1800 NOT initialized.");
 	//Annoinitialized = FALSE;
@@ -367,9 +385,33 @@ void runCommand(std::string cmd)
 			cmd.replace(cmd.find("{QTY}"), sizeof("{QTY}") - 1, cval);
 		}
 
-		std::ofstream outfile(curDir("script.lua"));
-		outfile << cmd + "\r\n" << std::endl;
-		outfile.close();
+		//if (cmd.find("{SLT}") != std::string::npos)
+		//{
+		//	std::string cval = std::to_string(slotNumber);
+			//MessageBoxA(NULL, (LPCSTR)cval.c_str(), "", MB_OK);
+		//	cmd.replace(cmd.find("{SLT}"), sizeof("{SLT}") - 1, cval.c_str());
+		//}
+
+
+
+		if (LuaMode == TRUE) {
+			std::ofstream outfile(curDir("script.lua"));
+			outfile << cmd + "\r\n" << std::endl;
+			outfile.close();
+
+			std::ofstream outfile2(curDir("script.py"));
+			outfile2 << "" << std::endl;
+			outfile2.close();
+		}
+		else {
+			std::ofstream outfile(curDir("script.py"));
+			outfile << cmd + "\r\n" << std::endl;
+			outfile.close();
+
+			std::ofstream outfile2(curDir("script.lua"));
+			outfile2 << "" << std::endl;
+			outfile2.close();
+		}
 
 		HANDLE hThread = NULL;
 
@@ -413,7 +455,13 @@ void CAnnoPythonAPIToolDlg::OnLbnSelchangeList2()
 
 	ItemSelected.Replace(wpnl, _T("\r\n"));
 
-	ItemSelected = L"--" + ItemSelected;
+	if (LuaMode == TRUE) {
+		ItemSelected = L"--" + ItemSelected;
+	}
+	else {
+		ItemSelected = L"#" + ItemSelected;
+	}
+	
 
 	commandbox->SetWindowText(ItemSelected);
 
@@ -421,6 +469,8 @@ void CAnnoPythonAPIToolDlg::OnLbnSelchangeList2()
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 {
+	luamodeoption.SendMessage(BM_CLICK, NULL, NULL);
+
 	CWnd* btn;
 	btn = GetDlgItem(IDC_BUTTON3);
 	btn->SetWindowTextW(L"Cheats *");
@@ -434,6 +484,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 	btn->SetWindowTextW(L"Discovery -");
 	btn = GetDlgItem(IDC_BUTTON8);
 	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = GetDlgItem(IDC_BUTTON14);
+	btn->SetWindowTextW(L"Python Test -");
 	btn = NULL;
 
 	ListBox1.ResetContent();
@@ -441,7 +493,7 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 	ListBox1.AddString(_T("Substract (Quantity) coins from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(1010017, -{QTY})"));
 	ListBox1.AddString(_T("Add (Quantity) goods to current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount({QTY})"));
 	ListBox1.AddString(_T("Substract (Quantity) goods from current economy") + wpnl + _T("ts.Area.Current.Economy.AddAmount(-{QTY})"));
-	ListBox1.AddString(_T("Add (GUID) to current selected ship") + wpnl + _T("ts.Selection.Object.ItemContainer.SetEquipSlot(0, 0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(0)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot({GUID}, {QTY})"));
+	ListBox1.AddString(_T("Add (GUID) to current selected ship") + wpnl + _T("ts.Selection.Object.ItemContainer.SetEquipSlot(0, -1)\r\nts.Selection.Object.ItemContainer.SetClearSlot(0)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot({GUID}, {QTY})"));
 	ListBox1.AddString(_T("Toggle electricity") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleElectricity()"));
 	ListBox1.AddString(_T("Toggle super ship speed") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleSuperShipSpeed()"));
 	ListBox1.AddString(_T("Add building materials to current selected ship") + wpnl + _T("ts.Selection.Object.ItemContainer.SetEquipSlot(0, 0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(0)\r\nts.Selection.Object.ItemContainer.SetClearSlot(1)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot(1010196, 50)\r\nts.Selection.Object.ItemContainer.SetCheatItemInSlot(1010218, 50)"));
@@ -452,11 +504,17 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton3()
 	ListBox1.AddString(_T("Toggle fluid resident settle behaviour") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleFluidResidentSettleBehaviour()"));
 	ListBox1.AddString(_T("Toggle defer expensive quest system") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleDeferExpensiveQuestSystem()"));
 	ListBox1.AddString(_T("Disable undiscovered") + wpnl + _T("ts.Cheat.GlobalCheats.DisableUndiscovered()"));
+	ListBox1.AddString(_T("Total trade") + wpnl + _T("ts.Participants.CheatTotalTrade()"));
+	ListBox1.AddString(_T("Total war") + wpnl + _T("ts.Participants.CheatTotalWar()"));
+	ListBox1.AddString(_T("Total alliance") + wpnl + _T("ts.Participants.CheatAlliance()"));
 
 }
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton4()
 {
+
+	luamodeoption.SendMessage(BM_CLICK, NULL, NULL);
+
 	CWnd* btn;
 	btn = GetDlgItem(IDC_BUTTON3);
 	btn->SetWindowTextW(L"Cheats -");
@@ -470,6 +528,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton4()
 	btn->SetWindowTextW(L"Discovery *");
 	btn = GetDlgItem(IDC_BUTTON8);
 	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = GetDlgItem(IDC_BUTTON14);
+	btn->SetWindowTextW(L"Python Test -");
 	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Discover whole map") + wpnl + _T("TextSources.TextSourceRoots.Discovery.ShowAll()"));
@@ -480,6 +540,9 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton4()
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton5()
 {
+
+	luamodeoption.SendMessage(BM_CLICK, NULL, NULL);
+
 	CWnd* btn;
 	btn = GetDlgItem(IDC_BUTTON3);
 	btn->SetWindowTextW(L"Cheats -");
@@ -493,6 +556,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton5()
 	btn->SetWindowTextW(L"Discovery -");
 	btn = GetDlgItem(IDC_BUTTON8);
 	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = GetDlgItem(IDC_BUTTON14);
+	btn->SetWindowTextW(L"Python Test -");
 	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Toggle wind direction") + wpnl + _T("ts.Weather.SetChangeWind()"));
@@ -501,6 +566,9 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton5()
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton6()
 {
+
+	luamodeoption.SendMessage(BM_CLICK, NULL, NULL);
+
 	CWnd* btn;
 	btn = GetDlgItem(IDC_BUTTON3);
 	btn->SetWindowTextW(L"Cheats -");
@@ -514,6 +582,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton6()
 	btn->SetWindowTextW(L"Discovery -");
 	btn = GetDlgItem(IDC_BUTTON8);
 	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = GetDlgItem(IDC_BUTTON14);
+	btn->SetWindowTextW(L"Python Test -");
 	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Toggle incidents") + wpnl + _T("ts.Cheat.GlobalCheats.ToggleIncidents()"));
@@ -524,6 +594,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton6()
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton7()
 {
+	luamodeoption.SendMessage(BM_CLICK, NULL, NULL);
+
 	CWnd* btn;
 	btn = GetDlgItem(IDC_BUTTON3);
 	btn->SetWindowTextW(L"Cheats -");
@@ -537,6 +609,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton7()
 	btn->SetWindowTextW(L"Discovery -");
 	btn = GetDlgItem(IDC_BUTTON8);
 	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = GetDlgItem(IDC_BUTTON14);
+	btn->SetWindowTextW(L"Python Test -");
 	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("Toggle skip transit") + wpnl + _T("ts.Contracts.ToggleSkipTransit()"));
@@ -545,6 +619,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton7()
 
 void CAnnoPythonAPIToolDlg::OnBnClickedButton8()
 {
+	luamodeoption.SendMessage(BM_CLICK, NULL, NULL);
+
 	CWnd* btn;
 	btn = GetDlgItem(IDC_BUTTON3);
 	btn->SetWindowTextW(L"Cheats -");
@@ -558,6 +634,8 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton8()
 	btn->SetWindowTextW(L"Discovery -");
 	btn = GetDlgItem(IDC_BUTTON8);
 	btn->SetWindowTextW(L"Dump (UNSAFE) *");
+	btn = GetDlgItem(IDC_BUTTON14);
+	btn->SetWindowTextW(L"Python Test -");
 	btn = NULL;
 	ListBox1.ResetContent();
 	ListBox1.AddString(_T("\r\nTextSources.TextSourceRoots.Cheat.ToggleInGameDebugCheatPage()"));
@@ -998,4 +1076,100 @@ void CAnnoPythonAPIToolDlg::OnBnClickedButton12()
 	catch (int) {
 		// Block of code to handle errors
 	}
+}
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedRadio2()
+{
+	
+	if (luamodeoption.GetCheck() == 1) {
+		LuaMode = TRUE;
+		PythonMode = FALSE;
+		
+		CString val;
+		commandbox->GetWindowTextW(val);
+		if (val != "") {
+			std::string cval = CW2A(val.GetString());
+			if (cval.find("#") != std::string::npos)
+			{
+				cval.replace(cval.find("#"), sizeof("#") - 1, "--");
+				std::wstring val2 = std::wstring(cval.begin(), cval.end());
+				commandbox->SetWindowTextW(val2.c_str());
+			}
+		}
+	}	
+	
+}
+
+void CAnnoPythonAPIToolDlg::OnBnClickedRadio1()
+{
+	
+	if (pythonmodeoption.GetCheck() == 1) {
+		LuaMode = FALSE;
+		PythonMode = TRUE;
+
+		CString val;
+		commandbox->GetWindowTextW(val);
+		if (val != "") {
+			std::string cval = CW2A(val.GetString());
+			if (cval.find("--") != std::string::npos)
+			{
+				cval.replace(cval.find("--"), sizeof("--") - 1, "#");
+				std::wstring val2 = std::wstring(cval.begin(), cval.end());
+				commandbox->SetWindowTextW(val2.c_str());
+			}
+			
+		}
+		
+	}
+
+}
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedButton14()
+{
+	pythonmodeoption.SendMessage(BM_CLICK, NULL, NULL);
+
+	CWnd* btn;
+	btn = GetDlgItem(IDC_BUTTON3);
+	btn->SetWindowTextW(L"Cheats -");
+	btn = GetDlgItem(IDC_BUTTON5);
+	btn->SetWindowTextW(L"Weather -");
+	btn = GetDlgItem(IDC_BUTTON6);
+	btn->SetWindowTextW(L"Incidents -");
+	btn = GetDlgItem(IDC_BUTTON7);
+	btn->SetWindowTextW(L"Contracts -");
+	btn = GetDlgItem(IDC_BUTTON4);
+	btn->SetWindowTextW(L"Discovery -");
+	btn = GetDlgItem(IDC_BUTTON8);
+	btn->SetWindowTextW(L"Dump (UNSAFE) -");
+	btn = GetDlgItem(IDC_BUTTON14);
+	btn->SetWindowTextW(L"Python Test *");
+	btn = NULL;
+
+	ListBox1.ResetContent();
+	ListBox1.AddString(_T("Log Anno6 test (log file will be located in Anno's install dir)") + wpnl + _T("import logging\r\nimport Anno6\r\n\r\nlogging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')\r\nlogging.warning(Anno6)"));
+}
+
+
+
+void CAnnoPythonAPIToolDlg::OnBnClickedCheck2()
+{
+	CheckBox3.SetCheck(FALSE);
+	CheckBox4.SetCheck(FALSE);
+	slotNumber = 0;
+}
+
+void CAnnoPythonAPIToolDlg::OnBnClickedCheck3()
+{
+	CheckBox2.SetCheck(FALSE);
+	CheckBox4.SetCheck(FALSE);
+	slotNumber = 1;
+}
+
+void CAnnoPythonAPIToolDlg::OnBnClickedCheck4()
+{
+	CheckBox2.SetCheck(FALSE);
+	CheckBox3.SetCheck(FALSE);
+	slotNumber = 2;
 }
